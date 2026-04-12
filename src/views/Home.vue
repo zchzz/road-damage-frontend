@@ -27,7 +27,7 @@
           <div class="feature-item">
             <el-icon :size="30" color="#E6A23C"><FolderChecked /></el-icon>
             <h3>持久存储</h3>
-            <p>任务信息写入服务器目录，支持历史结果回溯</p>
+            <p>任务信息写入 JSON 存根，支持历史结果回溯</p>
           </div>
         </el-col>
       </el-row>
@@ -43,11 +43,9 @@ import UploadPanel from '../components/UploadPanel.vue'
 const router = useRouter()
 
 const onTaskCreated = (res) => {
+  // 核心逻辑：上传成功后拿到 task_id，跳转到检测详情页
   if (res.task_id) {
-    router.push({
-      name: 'OnlineDetect',
-      params: { taskId: res.task_id }
-    })
+    router.push(`/online/${res.task_id}`)
   }
 }
 </script>
@@ -63,47 +61,21 @@ const onTaskCreated = (res) => {
   margin: 0 auto;
   text-align: center;
 }
-.main-title {
-  font-size: 36px;
-  color: #1a1a1a;
-  margin-bottom: 10px;
-  font-weight: 700;
-}
-.sub-title {
-  color: #606266;
-  font-size: 18px;
-  margin-bottom: 50px;
-}
+.main-title { font-size: 32px; color: #1a1a1a; margin-bottom: 10px; }
+.sub-title { color: #666; margin-bottom: 40px; }
 .upload-wrapper {
-  background: #ffffff;
-  padding: 40px;
-  border-radius: 20px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05);
-  margin-bottom: 60px;
+  background: #fff;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
 }
-.features {
-  margin-top: 40px;
-}
+.features { margin-top: 60px; }
 .feature-item {
-  padding: 30px 20px;
-  background: #ffffff;
+  padding: 20px;
+  background: #fff;
   border-radius: 12px;
   border: 1px solid #ebeef5;
-  transition: all 0.3s ease;
 }
-.feature-item:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-  border-color: #409eff;
-}
-.feature-item h3 {
-  margin: 20px 0 12px;
-  font-size: 20px;
-  color: #303133;
-}
-.feature-item p {
-  font-size: 14px;
-  color: #909399;
-  line-height: 1.6;
-}
+.feature-item h3 { margin: 15px 0 10px; font-size: 18px; }
+.feature-item p { font-size: 14px; color: #888; }
 </style>
