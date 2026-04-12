@@ -1,3 +1,4 @@
+import.meta.env.VITE_WS_BASE_URL
 export function createTaskWebSocket(taskId, handlers = {}) {
   const wsBase = import.meta.env.VITE_WS_BASE_URL
   const ws = new WebSocket(`${wsBase}/ws/${taskId}`)

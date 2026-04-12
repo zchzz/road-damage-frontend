@@ -177,22 +177,32 @@ function handleStreamError(event) {
 async function fetchResult() {
   try {
     const res = await request({
-      url: `/api/result/${taskId}`,
+      url: `/api/result/${taskId}`, // 对应后端 result_router
       method: 'get'
     })
 
-    videoUrl.value = res.annotated_video_url || ''
-    reportUrl.value = res.report_url || ''
-    jsonUrl.value = res.json_url || ''
-    status.value = res.status || 'completed'
+    // 关键点：将后端返回的路径拼接为完整的 URL
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://road-damage-backend-1.onrender.com'
 
-    console.log('fetchResult success:', res)
+    // 使用后端返回的相对于静态目录的路径
+    videoUrl.value = res.annotated_video_url.startsWith('http')
+      ? res.annotated_video_url
+      : `${apiBase}${res.annotated_video_url}`
+
+    reportUrl.value = res.report_url.startsWith('http')
+      ? res.report_url
+      : `${apiBase}${res.report_url}`
+
+    // 这里就是读取你“持久化”存储的 result.json 路径
+    jsonUrl.value = res.json_url.startsWith('http')
+      ? res.json_url
+      : `${apiBase}${res.json_url}`
+
+    status.value = res.status || 'completed'
   } catch (error) {
     console.error('获取结果失败:', error)
-    ElMessage.error(error.message || '获取结果失败')
   }
 }
-
 async function fetchTaskStatus() {
   try {
     const res = await request({
