@@ -1,4 +1,4 @@
-import request from '../utils/request'
+import request from '@/api/client'
 
 export function getTaskStatus(taskId) {
   return request({

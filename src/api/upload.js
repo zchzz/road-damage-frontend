@@ -1,4 +1,4 @@
-import request from '../utils/request'
+import request from '@/api/client'
 
 export function uploadVideo({ file, mode, confidence, skipFrames }) {
   const formData = new FormData()
