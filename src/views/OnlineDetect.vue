@@ -42,13 +42,9 @@ import UploadPanel from '../components/UploadPanel.vue'
 
 const router = useRouter()
 
-/**
- * 当 UploadPanel 组件上传成功并拿到任务 ID 后触发
- * @param {Object} res - 后端返回的响应对象，包含 task_id
- */
 const onTaskCreated = (res) => {
   if (res.task_id) {
-    // 根据返回的任务 ID 跳转到在线检测页面
+    // 确保路由名称与 index.js 中定义的一致
     router.push({
       name: 'OnlineDetect',
       params: { taskId: res.task_id }
@@ -60,7 +56,6 @@ const onTaskCreated = (res) => {
 <style scoped>
 .home-container {
   padding: 60px 20px;
-  /* 渐变背景，提升视觉档次 */
   background: linear-gradient(180deg, #f0f2f5 0%, #ffffff 100%);
   min-height: calc(100vh - 60px);
 }
@@ -75,7 +70,7 @@ const onTaskCreated = (res) => {
   font-size: 36px;
   color: #1a1a1a;
   margin-bottom: 10px;
-  letter-spacing: 1px;
+  font-weight: 700;
 }
 
 .sub-title {
@@ -88,7 +83,6 @@ const onTaskCreated = (res) => {
   background: #ffffff;
   padding: 40px;
   border-radius: 20px;
-  /* 柔和阴影，让上传框“浮”起来 */
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05);
   margin-bottom: 60px;
 }
@@ -105,7 +99,6 @@ const onTaskCreated = (res) => {
   transition: all 0.3s ease;
 }
 
-/* 鼠标悬停时的动画效果 */
 .feature-item:hover {
   transform: translateY(-8px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
