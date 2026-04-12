@@ -1,119 +1,435 @@
 <template>
-  <div class="home-container">
-    <div class="hero-card">
-      <h1 class="main-title">道路病害智能检测系统</h1>
-      <p class="sub-title">基于 YOLOv8 与深度学习的视觉分析平台</p>
+  <div class="online-page">
+    <el-card class="panel">
+      <template #header>
+        <div class="header-row">
+          <span class="title">在线解析</span>
+          <span class="task-id">任务ID：{{ taskId }}</span>
+        </div>
+      </template>
 
-      <div class="upload-wrapper">
-        <UploadPanel @submitted="onTaskCreated" />
+      <div class="status-block">
+        <el-progress :percentage="progress" :status="progressStatus" />
+        <p class="message-text">{{ message }}</p>
+        <p class="frame-text">当前帧：{{ currentFrame }} / {{ totalFrames || '-' }}</p>
       </div>
 
-      <el-row :gutter="20" class="features">
-        <el-col :span="8">
-          <div class="feature-item">
-            <el-icon :size="30" color="#409EFF"><Monitor /></el-icon>
-            <h3>实时分析</h3>
-            <p>通过 WebSocket 实时查看推理画面与病害标注</p>
+      <div v-if="showRealtime" class="realtime-section">
+        <h3>实时检测画面</h3>
+        <div class="realtime-box">
+          <img
+            :src="streamUrl"
+            class="realtime-image"
+            alt="实时检测流"
+            @load="handleStreamLoad"
+            @error="handleStreamError"
+          />
+        </div>
+      </div>
+
+      <div v-if="videoUrl && !showRealtime" class="video-section">
+        <h3>最终标注结果视频</h3>
+        <video
+          :src="videoUrl"
+          controls
+          preload="metadata"
+          class="result-video"
+        />
+      </div>
+
+      <div class="stats-section">
+        <h3>病害统计</h3>
+        <div v-if="statList.length > 0" class="stats-list">
+          <div
+            v-for="item in statList"
+            :key="item.name"
+            class="stat-item"
+          >
+            <span>{{ item.name }}</span>
+            <span>{{ item.count }}</span>
           </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="feature-item">
-            <el-icon :size="30" color="#67C23A"><DataAnalysis /></el-icon>
-            <h3>精准统计</h3>
-            <p>自动分类各类裂缝、坑洞，并生成统计报表</p>
-          </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="feature-item">
-            <el-icon :size="30" color="#E6A23C"><FolderChecked /></el-icon>
-            <h3>持久存储</h3>
-            <p>任务信息写入服务器目录，支持历史结果回溯</p>
-          </div>
-        </el-col>
-      </el-row>
-    </div>
+        </div>
+        <el-empty v-else description="暂无统计数据" />
+      </div>
+
+      <div class="table-section">
+        <h3>当前帧检测结果</h3>
+        <el-table :data="detections" border style="width: 100%">
+          <el-table-column prop="class_name" label="病害类型" min-width="160" />
+          <el-table-column label="置信度" min-width="120">
+            <template #default="scope">
+              {{ formatConfidence(scope.row.confidence) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="边界框" min-width="260">
+            <template #default="scope">
+              {{ formatBbox(scope.row.bbox) }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <div v-if="status === 'completed'" class="action-row">
+        <el-button
+          v-if="reportUrl"
+          type="primary"
+          @click="openUrl(reportUrl)"
+        >
+          查看报告
+        </el-button>
+
+        <el-button
+          v-if="jsonUrl"
+          @click="openUrl(jsonUrl)"
+        >
+          查看 JSON
+        </el-button>
+      </div>
+
+      <div v-if="status === 'failed'" class="failed-row">
+        <el-alert
+          title="任务执行失败"
+          :description="message"
+          type="error"
+          show-icon
+          :closable="false"
+        />
+      </div>
+    </el-card>
   </div>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-import { Monitor, DataAnalysis, FolderChecked } from '@element-plus/icons-vue'
-import UploadPanel from '../components/UploadPanel.vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import request from '../utils/request'
 
-const router = useRouter()
+const route = useRoute()
+const taskId = route.params.taskId
 
-const onTaskCreated = (res) => {
-  if (res.task_id) {
-    // 确保路由名称与 index.js 中定义的一致
-    router.push({
-      name: 'OnlineDetect',
-      params: { taskId: res.task_id }
+const progress = ref(0)
+const currentFrame = ref(0)
+const totalFrames = ref(0)
+const detections = ref([])
+const statistics = ref({})
+const message = ref('等待任务开始')
+const status = ref('processing')
+// 计算存储文件的真实 URL
+const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://road-damage-backend-1.onrender.com'
+
+const resultJsonUrl = computed(() => `${apiBase}/static/tasks/${taskId}/result.json`)
+const metaJsonUrl = computed(() => `${apiBase}/static/tasks/${taskId}/meta.json`)
+
+function downloadJson(url) {
+  window.open(url, '_blank')
+}
+const videoUrl = ref('')
+const reportUrl = ref('')
+const jsonUrl = ref('')
+
+const showRealtime = ref(true)
+const ws = ref(null)
+const hideRealtimeTimer = ref(null)
+
+const progressStatus = computed(() => {
+  if (status.value === 'failed') return 'exception'
+  if (status.value === 'completed') return 'success'
+  return ''
+})
+
+const statList = computed(() => {
+  return Object.entries(statistics.value || {}).map(([name, count]) => ({
+    name,
+    count
+  }))
+})
+
+const streamUrl = computed(() => {
+  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+  return `${apiBase}/api/stream/${taskId}`
+})
+
+function getWsBaseUrl() {
+  const envWs = import.meta.env.VITE_WS_BASE_URL
+  if (envWs) return envWs
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+  if (apiBase.startsWith('https://')) {
+    return apiBase.replace(/^https:\/\//, 'wss://')
+  }
+  return apiBase.replace(/^http:\/\//, 'ws://')
+}
+
+function formatConfidence(value) {
+  return Number(value || 0).toFixed(2)
+}
+
+function formatBbox(bbox) {
+  if (!Array.isArray(bbox)) return '-'
+  return `[${bbox.join(', ')}]`
+}
+
+function openUrl(url) {
+  window.open(url, '_blank')
+}
+
+function handleStreamLoad() {
+  console.log('MJPEG stream loaded:', streamUrl.value)
+}
+
+function handleStreamError(event) {
+  console.error('MJPEG stream error:', event)
+}
+
+async function fetchResult() {
+  try {
+    const res = await request({
+      url: `/api/result/${taskId}`, // 对应后端 result_router
+      method: 'get'
     })
+
+    // 关键点：将后端返回的路径拼接为完整的 URL
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://road-damage-backend-1.onrender.com'
+
+    // 使用后端返回的相对于静态目录的路径
+    videoUrl.value = res.annotated_video_url.startsWith('http')
+      ? res.annotated_video_url
+      : `${apiBase}${res.annotated_video_url}`
+
+    reportUrl.value = res.report_url.startsWith('http')
+      ? res.report_url
+      : `${apiBase}${res.report_url}`
+
+    // 这里就是读取你“持久化”存储的 result.json 路径
+    jsonUrl.value = res.json_url.startsWith('http')
+      ? res.json_url
+      : `${apiBase}${res.json_url}`
+
+    status.value = res.status || 'completed'
+  } catch (error) {
+    console.error('获取结果失败:', error)
   }
 }
+async function fetchTaskStatus() {
+  try {
+    const res = await request({
+      url: `/api/task/${taskId}`,
+      method: 'get'
+    })
+
+    if (!res) return
+
+    status.value = res.status || status.value
+    progress.value = Number(res.progress || 0)
+    message.value = res.message || message.value
+
+    console.log('fetchTaskStatus:', res)
+
+    if (res.status === 'completed') {
+      await fetchResult()
+
+      if (!hideRealtimeTimer.value) {
+        hideRealtimeTimer.value = setTimeout(() => {
+          showRealtime.value = false
+        }, 5000)
+      }
+    }
+
+    if (res.status === 'failed') {
+      showRealtime.value = false
+    }
+  } catch (error) {
+    console.error('获取任务状态失败:', error)
+  }
+}
+
+function connectWebSocket() {
+  const wsBase = getWsBaseUrl()
+  const wsUrl = `${wsBase}/ws/${taskId}`
+
+  console.log('taskId:', taskId)
+  console.log('streamUrl:', streamUrl.value)
+  console.log('wsUrl:', wsUrl)
+
+  ws.value = new WebSocket(wsUrl)
+
+  ws.value.onopen = () => {
+    console.log('WebSocket connected')
+  }
+
+  ws.value.onmessage = async (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      console.log('ws data:', data)
+
+      if (data.type === 'progress') {
+        progress.value = Number(data.progress ?? 0)
+        currentFrame.value = Number(data.current_frame ?? 0)
+        totalFrames.value = Number(data.total_frames ?? 0)
+        detections.value = Array.isArray(data.detections) ? data.detections : []
+        statistics.value = data.statistics || {}
+        message.value = data.message || '正在处理视频'
+        status.value = 'processing'
+        return
+      }
+
+      if (data.type === 'completed') {
+        progress.value = 100
+        currentFrame.value = Number(data.current_frame ?? currentFrame.value)
+        totalFrames.value = Number(data.total_frames ?? totalFrames.value)
+        message.value = data.message || '检测完成'
+        statistics.value = data.statistics || statistics.value
+        status.value = 'completed'
+
+        await fetchResult()
+
+        if (!hideRealtimeTimer.value) {
+          hideRealtimeTimer.value = setTimeout(() => {
+            showRealtime.value = false
+          }, 5000)
+        }
+
+        return
+      }
+
+      if (data.type === 'failed') {
+        status.value = 'failed'
+        message.value = data.message || '任务失败'
+        showRealtime.value = false
+        ElMessage.error(message.value)
+      }
+    } catch (error) {
+      console.error('解析 WebSocket 消息失败:', error)
+    }
+  }
+
+  ws.value.onerror = (error) => {
+    console.error('WebSocket error:', error)
+  }
+
+  ws.value.onclose = () => {
+    console.log('WebSocket closed')
+  }
+}
+
+onMounted(async () => {
+  showRealtime.value = true
+  await fetchTaskStatus()
+  connectWebSocket()
+})
+
+onBeforeUnmount(() => {
+  if (ws.value) {
+    ws.value.close()
+  }
+
+  if (hideRealtimeTimer.value) {
+    clearTimeout(hideRealtimeTimer.value)
+    hideRealtimeTimer.value = null
+  }
+})
 </script>
 
 <style scoped>
-.home-container {
-  padding: 60px 20px;
-  background: linear-gradient(180deg, #f0f2f5 0%, #ffffff 100%);
-  min-height: calc(100vh - 60px);
+.online-page {
+  padding: 24px;
+  background: #f5f7fa;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
-.hero-card {
-  max-width: 1000px;
+.panel {
+  max-width: 1100px;
   margin: 0 auto;
-  text-align: center;
-}
-
-.main-title {
-  font-size: 36px;
-  color: #1a1a1a;
-  margin-bottom: 10px;
-  font-weight: 700;
-}
-
-.sub-title {
-  color: #606266;
-  font-size: 18px;
-  margin-bottom: 50px;
-}
-
-.upload-wrapper {
-  background: #ffffff;
-  padding: 40px;
-  border-radius: 20px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05);
-  margin-bottom: 60px;
-}
-
-.features {
-  margin-top: 40px;
-}
-
-.feature-item {
-  padding: 30px 20px;
-  background: #ffffff;
   border-radius: 12px;
-  border: 1px solid #ebeef5;
-  transition: all 0.3s ease;
 }
 
-.feature-item:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-  border-color: #409eff;
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
-.feature-item h3 {
-  margin: 20px 0 12px;
+.title {
   font-size: 20px;
-  color: #303133;
+  font-weight: 600;
 }
 
-.feature-item p {
+.task-id {
+  color: #606266;
   font-size: 14px;
+  word-break: break-all;
+}
+
+.status-block {
+  margin-bottom: 20px;
+}
+
+.message-text {
+  margin: 12px 0 6px;
+  color: #606266;
+}
+
+.frame-text {
+  margin: 0;
   color: #909399;
-  line-height: 1.6;
+  font-size: 14px;
+}
+
+.realtime-section,
+.video-section,
+.stats-section,
+.table-section,
+.action-row,
+.failed-row {
+  margin-top: 24px;
+}
+
+.realtime-box {
+  width: 100%;
+  min-height: 360px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.realtime-image {
+  width: 100%;
+  display: block;
+  background: #000;
+}
+
+.result-video {
+  width: 100%;
+  max-height: 560px;
+  background: #000;
+  border-radius: 8px;
+  outline: none;
+}
+
+.stats-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #f5f7fa;
+  border: 1px solid #ebeef5;
+}
+
+.action-row {
+  display: flex;
+  gap: 12px;
 }
 </style>
