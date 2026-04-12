@@ -1,26 +1,82 @@
-// 建议在你的 src/views/ 目录下创建一个 Home.vue 包含以下逻辑
 <template>
-  <div class="upload-container">
-    <el-upload
-      drag
-      action="https://road-damage-backend-1.onrender.com/api/upload"
-      :on-success="handleSuccess"
-      :data="uploadParams"
-    >
-      <i class="el-icon-upload"></i>
-      <div class="el-upload__text">将视频拖到此处，或<em>点击上传</em></div>
-    </el-upload>
+  <div class="home-container">
+    <div class="hero-card">
+      <h1 class="main-title">道路病害智能检测系统</h1>
+      <p class="sub-title">基于 YOLOv8 与深度学习的视觉分析平台</p>
 
-    <div v-if="taskRunning">
-      <el-progress :percentage="progress" />
-      <p>{{ statusMessage }}</p>
+      <div class="upload-wrapper">
+        <UploadPanel @submitted="onTaskCreated" />
+      </div>
+
+      <el-row :gutter="20" class="features">
+        <el-col :span="8">
+          <div class="feature-item">
+            <el-icon :size="30"><Monitor /></el-icon>
+            <h3>实时分析</h3>
+            <p>通过 WebSocket 实时查看推理画面与病害标注</p>
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="feature-item">
+            <el-icon :size="30"><DataAnalysis /></el-icon>
+            <h3>精准统计</h3>
+            <p>自动分类各类裂缝、坑洞，并生成统计报表</p>
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="feature-item">
+            <el-icon :size="30"><FolderChecked /></el-icon>
+            <h3>持久存储</h3>
+            <p>任务信息写入 JSON 存根，支持历史结果回溯</p>
+          </div>
+        </el-col>
+      </el-row>
     </div>
-
-    <video v-if="resultUrl" :src="resultUrl" controls width="100%" />
   </div>
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+import { Monitor, DataAnalysis, FolderChecked } from '@element-plus/icons-vue'
+import UploadPanel from '../components/UploadPanel.vue'
+
+const router = useRouter()
+
+const onTaskCreated = (res) => {
+  // 核心逻辑：上传成功后拿到 task_id，跳转到检测详情页
+  if (res.task_id) {
+    router.push(`/online/${res.task_id}`)
+  }
+}
+</script>
+
+<style scoped>
+.home-container {
+  padding-top: 60px;
+  background: linear-gradient(180deg, #f0f2f5 0%, #ffffff 100%);
+  min-height: calc(100vh - 60px);
+}
+.hero-card {
+  max-width: 1000px;
+  margin: 0 auto;
+  text-align: center;
+}
+.main-title { font-size: 32px; color: #1a1a1a; margin-bottom: 10px; }
+.sub-title { color: #666; margin-bottom: 40px; }
+.upload-wrapper {
+  background: #fff;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+.features { margin-top: 60px; }
+.feature-item {
+  padding: 20px;
+  background: transparent;
+}
+.feature-item h3 { margin: 15px 0 10px; font-size: 18px; }
+.feature-item p { font-size: 14px; color: #888; }
+</style>
 import { ref, onMounted } from 'vue';
 import { io } from 'socket.io-client';
 

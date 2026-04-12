@@ -3,425 +3,243 @@
     <el-card class="panel">
       <template #header>
         <div class="header-row">
-          <span class="title">在线解析</span>
-          <span class="task-id">任务ID：{{ taskId }}</span>
+          <div class="left">
+            <el-button icon="ArrowLeft" circle @click="$router.push('/')" style="margin-right: 10px;" />
+            <span class="title">在线检测任务</span>
+          </div>
+          <el-tag type="info">任务ID：{{ taskId }}</el-tag>
         </div>
       </template>
 
       <div class="status-block">
-        <el-progress :percentage="progress" :status="progressStatus" />
-        <p class="message-text">{{ message }}</p>
-        <p class="frame-text">当前帧：{{ currentFrame }} / {{ totalFrames || '-' }}</p>
-      </div>
-
-      <div v-if="showRealtime" class="realtime-section">
-        <h3>实时检测画面</h3>
-        <div class="realtime-box">
-          <img
-            :src="streamUrl"
-            class="realtime-image"
-            alt="实时检测流"
-            @load="handleStreamLoad"
-            @error="handleStreamError"
-          />
+        <el-progress
+          :percentage="progress"
+          :status="progress === 100 ? 'success' : ''"
+          :stroke-width="20"
+          striped
+          striped-flow
+        />
+        <div class="status-info">
+          <p class="message-text"><el-icon v-if="progress < 100"><Loading /></el-icon> {{ message }}</p>
+          <p class="frame-text">处理进度：{{ currentFrame }} / {{ totalFrames || '-' }} 帧</p>
         </div>
       </div>
 
-      <div v-if="videoUrl && !showRealtime" class="video-section">
-        <h3>最终标注结果视频</h3>
-        <video
-          :src="videoUrl"
-          controls
-          preload="metadata"
-          class="result-video"
-        />
-      </div>
-
-      <div class="stats-section">
-        <h3>病害统计</h3>
-        <div v-if="statList.length > 0" class="stats-list">
-          <div
-            v-for="item in statList"
-            :key="item.name"
-            class="stat-item"
-          >
-            <span>{{ item.name }}</span>
-            <span>{{ item.count }}</span>
+      <el-row :gutter="20">
+        <el-col :span="14">
+          <div v-if="showRealtime" class="display-section">
+            <h3 class="section-title">实时检测流</h3>
+            <div class="media-box realtime-bg">
+              <img :src="streamUrl" class="media-content" alt="实时画面" @error="handleStreamError" />
+            </div>
           </div>
+
+          <div v-if="videoUrl && !showRealtime" class="display-section">
+            <h3 class="section-title">检测结果视频</h3>
+            <div class="media-box">
+              <video :src="videoUrl" controls class="media-content" />
+            </div>
+          </div>
+        </el-col>
+
+        <el-col :span="10">
+          <div class="stats-section">
+            <h3 class="section-title">病害实时统计</h3>
+            <ResultChart :summary="statistics" style="margin-bottom: 20px;" />
+            <ResultTable :rows="detections" />
+          </div>
+        </el-col>
+      </el-row>
+
+      <transition name="el-zoom-in-top">
+        <div v-if="progress === 100" class="storage-section">
+          <el-divider><el-icon><FolderChecked /></el-icon> 数据持久化存档</el-divider>
+          <div class="storage-buttons">
+            <el-button type="primary" plain @click="openStorageFile('result.json')">
+              查看检测报告 (result.json)
+            </el-button>
+            <el-button type="info" plain @click="openStorageFile('meta.json')">
+              查看任务配置 (meta.json)
+            </el-button>
+            <el-button type="success" plain @click="openStorageFile('output.mp4', 'outputs')">
+              原始结果视频
+            </el-button>
+          </div>
+          <p class="storage-tip">提示：数据已永久存储在后端服务器的 <code>/data/tasks/{{taskId}}</code> 目录下</p>
         </div>
-        <el-empty v-else description="暂无统计数据" />
-      </div>
-
-      <div class="table-section">
-        <h3>当前帧检测结果</h3>
-        <el-table :data="detections" border style="width: 100%">
-          <el-table-column prop="class_name" label="病害类型" min-width="160" />
-          <el-table-column label="置信度" min-width="120">
-            <template #default="scope">
-              {{ formatConfidence(scope.row.confidence) }}
-            </template>
-          </el-table-column>
-          <el-table-column label="边界框" min-width="260">
-            <template #default="scope">
-              {{ formatBbox(scope.row.bbox) }}
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-
-      <div v-if="status === 'completed'" class="action-row">
-        <el-button
-          v-if="reportUrl"
-          type="primary"
-          @click="openUrl(reportUrl)"
-        >
-          查看报告
-        </el-button>
-
-        <el-button
-          v-if="jsonUrl"
-          @click="openUrl(jsonUrl)"
-        >
-          查看 JSON
-        </el-button>
-      </div>
-
-      <div v-if="status === 'failed'" class="failed-row">
-        <el-alert
-          title="任务执行失败"
-          :description="message"
-          type="error"
-          show-icon
-          :closable="false"
-        />
-      </div>
+      </transition>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import request from '../utils/request'
+import { ElNotification } from 'element-plus'
+import { Loading, FolderChecked, ArrowLeft, Monitor } from '@element-plus/icons-vue'
+import ResultChart from '../components/ResultChart.vue'
+import ResultTable from '../components/ResultTable.vue'
 
 const route = useRoute()
 const taskId = route.params.taskId
 
+// 状态变量
 const progress = ref(0)
+const message = ref('正在建立连接...')
 const currentFrame = ref(0)
 const totalFrames = ref(0)
+const showRealtime = ref(true)
 const detections = ref([])
 const statistics = ref({})
-const message = ref('等待任务开始')
-const status = ref('processing')
-
 const videoUrl = ref('')
-const reportUrl = ref('')
-const jsonUrl = ref('')
 
-const showRealtime = ref(true)
-const ws = ref(null)
-const hideRealtimeTimer = ref(null)
+let ws = null
 
-const progressStatus = computed(() => {
-  if (status.value === 'failed') return 'exception'
-  if (status.value === 'completed') return 'success'
-  return ''
+// 基础 URL 处理
+const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://road-damage-backend-1.onrender.com'
+const streamUrl = `${apiBase}/api/stream/${taskId}`
+
+// 计算 WebSocket 地址 (自动处理 http->ws, https->wss)
+const wsUrl = computed(() => {
+  const url = apiBase.replace(/^http/, 'ws')
+  return `${url}/ws/${taskId}`
 })
 
-const statList = computed(() => {
-  return Object.entries(statistics.value || {}).map(([name, count]) => ({
-    name,
-    count
-  }))
-})
+// 初始化 WebSocket
+const initWebSocket = () => {
+  ws = new WebSocket(wsUrl.value)
 
-const streamUrl = computed(() => {
-  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
-  return `${apiBase}/api/stream/${taskId}`
-})
-
-function getWsBaseUrl() {
-  const envWs = import.meta.env.VITE_WS_BASE_URL
-  if (envWs) return envWs
-
-  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
-  if (apiBase.startsWith('https://')) {
-    return apiBase.replace(/^https:\/\//, 'wss://')
+  ws.onopen = () => {
+    console.log('WS Connected')
+    message.value = '已连接到后端检测引擎'
   }
-  return apiBase.replace(/^http:\/\//, 'ws://')
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data)
+
+    if (data.type === 'progress') {
+      progress.value = data.progress
+      message.value = data.message
+      currentFrame.value = data.current_frame
+      totalFrames.value = data.total_frames
+      detections.value = data.detections || []
+      statistics.value = data.statistics || {}
+    }
+    else if (data.type === 'completed') {
+      progress.value = 100
+      message.value = '检测任务已完成，数据已持久化存储'
+      showRealtime.value = false
+      // 这里的路径对应后端 app.mount("/static/outputs")
+      videoUrl.value = `${apiBase}/static/outputs/${taskId}/output.mp4`
+
+      ElNotification({
+        title: '任务完成',
+        message: '检测结果已成功存储到服务器',
+        type: 'success'
+      })
+    }
+    else if (data.type === 'error') {
+      message.value = '错误: ' + data.message
+    }
+  }
+
+  ws.onerror = () => {
+    message.value = 'WebSocket 连接失败，请检查后端状态'
+  }
 }
 
-function formatConfidence(value) {
-  return Number(value || 0).toFixed(2)
-}
-
-function formatBbox(bbox) {
-  if (!Array.isArray(bbox)) return '-'
-  return `[${bbox.join(', ')}]`
-}
-
-function openUrl(url) {
+// 访问后端存储的文件
+const openStorageFile = (fileName, type = 'tasks') => {
+  // type='tasks' 对应 /static/tasks (meta/result)
+  // type='outputs' 对应 /static/outputs (video/html)
+  const url = `${apiBase}/static/${type}/${taskId}/${fileName}`
   window.open(url, '_blank')
 }
 
-function handleStreamLoad() {
-  console.log('MJPEG stream loaded:', streamUrl.value)
-}
-
-function handleStreamError(event) {
-  console.error('MJPEG stream error:', event)
-}
-
-async function fetchResult() {
-  try {
-    const res = await request({
-      url: `/api/result/${taskId}`, // 对应后端 result_router
-      method: 'get'
-    })
-
-    // 关键点：将后端返回的路径拼接为完整的 URL
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://road-damage-backend-1.onrender.com'
-
-    // 使用后端返回的相对于静态目录的路径
-    videoUrl.value = res.annotated_video_url.startsWith('http')
-      ? res.annotated_video_url
-      : `${apiBase}${res.annotated_video_url}`
-
-    reportUrl.value = res.report_url.startsWith('http')
-      ? res.report_url
-      : `${apiBase}${res.report_url}`
-
-    // 这里就是读取你“持久化”存储的 result.json 路径
-    jsonUrl.value = res.json_url.startsWith('http')
-      ? res.json_url
-      : `${apiBase}${res.json_url}`
-
-    status.value = res.status || 'completed'
-  } catch (error) {
-    console.error('获取结果失败:', error)
-  }
-}
-async function fetchTaskStatus() {
-  try {
-    const res = await request({
-      url: `/api/task/${taskId}`,
-      method: 'get'
-    })
-
-    if (!res) return
-
-    status.value = res.status || status.value
-    progress.value = Number(res.progress || 0)
-    message.value = res.message || message.value
-
-    console.log('fetchTaskStatus:', res)
-
-    if (res.status === 'completed') {
-      await fetchResult()
-
-      if (!hideRealtimeTimer.value) {
-        hideRealtimeTimer.value = setTimeout(() => {
-          showRealtime.value = false
-        }, 5000)
-      }
-    }
-
-    if (res.status === 'failed') {
-      showRealtime.value = false
-    }
-  } catch (error) {
-    console.error('获取任务状态失败:', error)
+const handleStreamError = () => {
+  if (progress.value < 100) {
+    message.value = '实时流传输中断，尝试重新连接...'
   }
 }
 
-function connectWebSocket() {
-  const wsBase = getWsBaseUrl()
-  const wsUrl = `${wsBase}/ws/${taskId}`
-
-  console.log('taskId:', taskId)
-  console.log('streamUrl:', streamUrl.value)
-  console.log('wsUrl:', wsUrl)
-
-  ws.value = new WebSocket(wsUrl)
-
-  ws.value.onopen = () => {
-    console.log('WebSocket connected')
-  }
-
-  ws.value.onmessage = async (event) => {
-    try {
-      const data = JSON.parse(event.data)
-      console.log('ws data:', data)
-
-      if (data.type === 'progress') {
-        progress.value = Number(data.progress ?? 0)
-        currentFrame.value = Number(data.current_frame ?? 0)
-        totalFrames.value = Number(data.total_frames ?? 0)
-        detections.value = Array.isArray(data.detections) ? data.detections : []
-        statistics.value = data.statistics || {}
-        message.value = data.message || '正在处理视频'
-        status.value = 'processing'
-        return
-      }
-
-      if (data.type === 'completed') {
-        progress.value = 100
-        currentFrame.value = Number(data.current_frame ?? currentFrame.value)
-        totalFrames.value = Number(data.total_frames ?? totalFrames.value)
-        message.value = data.message || '检测完成'
-        statistics.value = data.statistics || statistics.value
-        status.value = 'completed'
-
-        await fetchResult()
-
-        if (!hideRealtimeTimer.value) {
-          hideRealtimeTimer.value = setTimeout(() => {
-            showRealtime.value = false
-          }, 5000)
-        }
-
-        return
-      }
-
-      if (data.type === 'failed') {
-        status.value = 'failed'
-        message.value = data.message || '任务失败'
-        showRealtime.value = false
-        ElMessage.error(message.value)
-      }
-    } catch (error) {
-      console.error('解析 WebSocket 消息失败:', error)
-    }
-  }
-
-  ws.value.onerror = (error) => {
-    console.error('WebSocket error:', error)
-  }
-
-  ws.value.onclose = () => {
-    console.log('WebSocket closed')
-  }
-}
-
-onMounted(async () => {
-  showRealtime.value = true
-  await fetchTaskStatus()
-  connectWebSocket()
+onMounted(() => {
+  initWebSocket()
 })
 
 onBeforeUnmount(() => {
-  if (ws.value) {
-    ws.value.close()
-  }
-
-  if (hideRealtimeTimer.value) {
-    clearTimeout(hideRealtimeTimer.value)
-    hideRealtimeTimer.value = null
-  }
+  if (ws) ws.close()
 })
 </script>
 
 <style scoped>
 .online-page {
-  padding: 24px;
-  background: #f5f7fa;
+  padding: 20px;
+  background-color: #f0f2f5;
   min-height: 100vh;
-  box-sizing: border-box;
 }
-
 .panel {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
   border-radius: 12px;
 }
-
 .header-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
 }
-
-.title {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.task-id {
-  color: #606266;
-  font-size: 14px;
-  word-break: break-all;
-}
-
 .status-block {
-  margin-bottom: 20px;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #ebeef5;
+}
+.status-info {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+.message-text { font-weight: bold; color: #409EFF; margin: 0; }
+.frame-text { color: #909399; font-size: 13px; margin: 0; }
+
+.section-title {
+  font-size: 16px;
+  border-left: 4px solid #409EFF;
+  padding-left: 10px;
+  margin-bottom: 15px;
 }
 
-.message-text {
-  margin: 12px 0 6px;
-  color: #606266;
-}
-
-.frame-text {
-  margin: 0;
-  color: #909399;
-  font-size: 14px;
-}
-
-.realtime-section,
-.video-section,
-.stats-section,
-.table-section,
-.action-row,
-.failed-row {
-  margin-top: 24px;
-}
-
-.realtime-box {
+.media-box {
   width: 100%;
-  min-height: 360px;
+  aspect-ratio: 16/9;
+  background: #000;
   border-radius: 8px;
   overflow: hidden;
-  background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-
-.realtime-image {
-  width: 100%;
-  display: block;
-  background: #000;
+.realtime-bg {
+  background: url('https://www.transparenttextures.com/patterns/black-thread.png') #1a1a1a;
+}
+.media-content {
+  max-width: 100%;
+  max-height: 100%;
 }
 
-.result-video {
-  width: 100%;
-  max-height: 560px;
-  background: #000;
+.storage-section {
+  margin-top: 40px;
+  padding: 20px;
+  background: #fdfdfd;
+  border: 1px dashed #dcdfe6;
   border-radius: 8px;
-  outline: none;
+  text-align: center;
 }
-
-.stats-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+.storage-buttons {
+  margin: 20px 0;
 }
-
-.stat-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 14px;
-  border-radius: 8px;
-  background: #f5f7fa;
-  border: 1px solid #ebeef5;
-}
-
-.action-row {
-  display: flex;
-  gap: 12px;
+.storage-tip {
+  font-size: 12px;
+  color: #909399;
 }
 </style>
