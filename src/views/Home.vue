@@ -1,82 +1,136 @@
 <template>
-  <div class="home-page">
-    <section class="hero">
-      <h1>道路病害视频智能分析平台</h1>
-      <p>
-        上传道路巡检视频，系统自动完成病害检测、任务跟踪、结果展示与文件导出。
-      </p>
+  <MainLayout>
+    <PageContainer>
+      <div class="theme-page">
+        <section class="theme-hero">
+          <div class="theme-hero__main">
+            <div class="theme-badge">Road Damage Detection</div>
+            <h1 class="theme-title">道路病害检测工作台</h1>
+            <p class="theme-desc">
+              统一上传、分析、任务跟踪与结果回看流程。首页只保留最关键的入口，
+              视觉语言和 detect 页保持同一套蓝白渐变与玻璃卡片风格。
+            </p>
 
-      <div class="actions">
-        <router-link to="/detect" class="btn btn-primary">
-          开始视频分析
-        </router-link>
-      </div>
-    </section>
+            <div class="theme-chip-row">
+              <span class="theme-chip">在线 / 离线双模式</span>
+              <span class="theme-chip">任务状态实时跟踪</span>
+              <span class="theme-chip">结果报告统一查看</span>
+            </div>
 
-    <section class="features">
-      <div class="card">
-        <h3>视频上传分析</h3>
-        <p>支持 mp4、avi、mov、mkv 等常见视频格式。</p>
-      </div>
+            <div class="theme-hero__actions">
+              <el-button type="primary" size="large" @click="goOnline">
+                进入在线分析
+              </el-button>
+              <el-button size="large" @click="goOffline">
+                进入离线分析
+              </el-button>
+            </div>
+          </div>
 
-      <div class="card">
-        <h3>任务进度跟踪</h3>
-        <p>支持轮询与 WebSocket 状态推送，随时查看当前进度。</p>
-      </div>
+          <div class="theme-hero__side">
+            <div class="theme-panel__head">快速概览</div>
+            <p class="theme-panel__sub">
+              用更轻的首页承接后续三个核心页面：Detect、Task、Result。
+            </p>
 
-      <div class="card">
-        <h3>结果可视化</h3>
-        <p>输出标注视频、检测明细、统计摘要与结果文件。</p>
+            <div class="theme-grid-two" style="margin-bottom: 0;">
+              <div class="theme-metric-card">
+                <span class="theme-metric-card__label">检测模式</span>
+                <strong class="theme-metric-card__value">2</strong>
+              </div>
+              <div class="theme-metric-card">
+                <span class="theme-metric-card__label">主要页面</span>
+                <strong class="theme-metric-card__value">3</strong>
+              </div>
+              <div class="theme-metric-card">
+                <span class="theme-metric-card__label">任务流程</span>
+                <strong class="theme-metric-card__value">4</strong>
+              </div>
+              <div class="theme-metric-card">
+                <span class="theme-metric-card__label">结果产物</span>
+                <strong class="theme-metric-card__value">3</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="theme-grid-two">
+          <div class="theme-panel">
+            <div class="theme-panel__head">核心能力</div>
+            <p class="theme-panel__sub">主页信息更聚焦，但保留完整的能力说明。</p>
+
+            <div class="theme-list">
+              <div class="theme-list-item">
+                <span class="theme-list-item__title">在线实时分析</span>
+                <span class="theme-list-item__value">
+                  适合实时演示、过程展示、状态反馈和实时预览。
+                </span>
+              </div>
+              <div class="theme-list-item">
+                <span class="theme-list-item__title">离线文件分析</span>
+                <span class="theme-list-item__value">
+                  适合长视频上传、稳定产出和后续结果回看。
+                </span>
+              </div>
+              <div class="theme-list-item">
+                <span class="theme-list-item__title">任务追踪</span>
+                <span class="theme-list-item__value">
+                  支持进度、连接状态、统计信息和当前检测明细查看。
+                </span>
+              </div>
+              <div class="theme-list-item">
+                <span class="theme-list-item__title">结果交付</span>
+                <span class="theme-list-item__value">
+                  统一承接标注视频、JSON 和 HTML 报告。
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="theme-panel">
+            <div class="theme-panel__head">标准流程</div>
+            <p class="theme-panel__sub">整体使用路径和 detect 页的操作节奏保持一致。</p>
+
+            <div class="theme-list">
+              <div class="theme-list-item">
+                <span class="theme-list-item__title">01 选择模式</span>
+                <span class="theme-list-item__value">根据场景进入在线分析或离线分析。</span>
+              </div>
+              <div class="theme-list-item">
+                <span class="theme-list-item__title">02 提交任务</span>
+                <span class="theme-list-item__value">上传视频并设置检测参数。</span>
+              </div>
+              <div class="theme-list-item">
+                <span class="theme-list-item__title">03 跟踪进度</span>
+                <span class="theme-list-item__value">查看任务状态、进度、连接方式与预览。</span>
+              </div>
+              <div class="theme-list-item">
+                <span class="theme-list-item__title">04 查看结果</span>
+                <span class="theme-list-item__value">浏览统计、检测明细和最终输出文件。</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="theme-panel">
+          <div class="theme-panel__head">立即开始</div>
+          <p class="theme-panel__sub">
+            入口区直接沿用 detect 页的按钮风格，减少主页和工作页之间的视觉割裂。
+          </p>
+
+          <div class="theme-hero__actions">
+            <el-button type="primary" size="large" @click="goOnline">
+              开始在线检测
+            </el-button>
+            <el-button size="large" @click="goOffline">
+              开始离线检测
+            </el-button>
+          </div>
+        </section>
       </div>
-    </section>
-  </div>
+    </PageContainer>
+  </MainLayout>
 </template>
 
 <script setup>
 </script>
-
-<style scoped>
-.home-page {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 40px 20px;
-}
-.hero {
-  text-align: center;
-  padding: 64px 0 40px;
-}
-.hero h1 {
-  font-size: 36px;
-  margin-bottom: 16px;
-}
-.hero p {
-  color: #666;
-  margin-bottom: 24px;
-}
-.actions {
-  display: flex;
-  justify-content: center;
-}
-.btn {
-  display: inline-block;
-  padding: 12px 24px;
-  border-radius: 8px;
-  text-decoration: none;
-}
-.btn-primary {
-  background: #1677ff;
-  color: #fff;
-}
-.features {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-top: 40px;
-}
-.card {
-  padding: 20px;
-  border: 1px solid #eee;
-  border-radius: 12px;
-  background: #fff;
-}
-</style>
