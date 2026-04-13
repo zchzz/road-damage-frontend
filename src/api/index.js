@@ -33,4 +33,16 @@ export function getTaskWsUrl(taskId) {
   return `${protocol}//${window.location.host}/ws/${taskId}`
 }
 
+export function getBackendOrigin() {
+  const raw = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+  return raw.replace(/\/$/, '').replace(/\/api$/, '')
+}
+
+export function resolveBackendFileUrl(url) {
+  if (!url) return ''
+  if (/^https?:\/\//i.test(url)) return url
+  const base = getBackendOrigin()
+  return `${base}${url.startsWith('/') ? '' : '/'}${url}`
+}
+
 export default api

@@ -12,17 +12,13 @@
             </p>
 
             <div class="theme-chip-row">
-              <span class="theme-chip">在线 / 离线双模式</span>
               <span class="theme-chip">任务状态实时跟踪</span>
               <span class="theme-chip">结果报告统一查看</span>
             </div>
 
             <div class="theme-hero__actions">
-              <el-button type="primary" size="large" @click="goOnline">
-                进入在线分析
-              </el-button>
-              <el-button size="large" @click="goOffline">
-                进入离线分析
+              <el-button type="primary" size="large" @click="goDetect">
+                进入视频分析
               </el-button>
             </div>
           </div>
@@ -34,14 +30,6 @@
             </p>
 
             <div class="theme-grid-two" style="margin-bottom: 0;">
-              <div class="theme-metric-card">
-                <span class="theme-metric-card__label">检测模式</span>
-                <strong class="theme-metric-card__value">2</strong>
-              </div>
-              <div class="theme-metric-card">
-                <span class="theme-metric-card__label">主要页面</span>
-                <strong class="theme-metric-card__value">3</strong>
-              </div>
               <div class="theme-metric-card">
                 <span class="theme-metric-card__label">任务流程</span>
                 <strong class="theme-metric-card__value">4</strong>
@@ -60,18 +48,6 @@
             <p class="theme-panel__sub">主页信息更聚焦，但保留完整的能力说明。</p>
 
             <div class="theme-list">
-              <div class="theme-list-item">
-                <span class="theme-list-item__title">在线实时分析</span>
-                <span class="theme-list-item__value">
-                  适合实时演示、过程展示、状态反馈和实时预览。
-                </span>
-              </div>
-              <div class="theme-list-item">
-                <span class="theme-list-item__title">离线文件分析</span>
-                <span class="theme-list-item__value">
-                  适合长视频上传、稳定产出和后续结果回看。
-                </span>
-              </div>
               <div class="theme-list-item">
                 <span class="theme-list-item__title">任务追踪</span>
                 <span class="theme-list-item__value">
@@ -93,38 +69,18 @@
 
             <div class="theme-list">
               <div class="theme-list-item">
-                <span class="theme-list-item__title">01 选择模式</span>
-                <span class="theme-list-item__value">根据场景进入在线分析或离线分析。</span>
-              </div>
-              <div class="theme-list-item">
-                <span class="theme-list-item__title">02 提交任务</span>
+                <span class="theme-list-item__title">01 提交任务</span>
                 <span class="theme-list-item__value">上传视频并设置检测参数。</span>
               </div>
               <div class="theme-list-item">
-                <span class="theme-list-item__title">03 跟踪进度</span>
+                <span class="theme-list-item__title">02 跟踪进度</span>
                 <span class="theme-list-item__value">查看任务状态、进度、连接方式与预览。</span>
               </div>
               <div class="theme-list-item">
-                <span class="theme-list-item__title">04 查看结果</span>
+                <span class="theme-list-item__title">03 查看结果</span>
                 <span class="theme-list-item__value">浏览统计、检测明细和最终输出文件。</span>
               </div>
             </div>
-          </div>
-        </section>
-
-        <section class="theme-panel">
-          <div class="theme-panel__head">立即开始</div>
-          <p class="theme-panel__sub">
-            入口区直接沿用 detect 页的按钮风格，减少主页和工作页之间的视觉割裂。
-          </p>
-
-          <div class="theme-hero__actions">
-            <el-button type="primary" size="large" @click="goOnline">
-              开始在线检测
-            </el-button>
-            <el-button size="large" @click="goOffline">
-              开始离线检测
-            </el-button>
           </div>
         </section>
       </div>
@@ -133,4 +89,11 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+function goDetect() {
+  router.push('/detect')
+}
 </script>

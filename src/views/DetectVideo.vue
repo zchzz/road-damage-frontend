@@ -165,111 +165,111 @@ import { uploadVideo } from '@/api'
 
 const router = useRouter()
 
-const MAX_VIDEO_SIZE_MB = Number(import.meta.env.VITE_MAX_VIDEO_SIZE_MB || 500)
-const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024
-const ALLOWED_EXTENSIONS = new Set(['.mp4', '.avi', '.mov', '.mkv'])
+const MAX_VIDEO_SIZE_MB = 500
+
+const fileInputRef = ref(null)
+const selectedFile = ref(null)
+const loading = ref(false)
+const uploadProgress = ref(0)
+const errorMsg = ref('')
 
 const precisionOptions = [
   {
-    value: 'high',
-    label: '高精度',
-    skipFrames: 1,
-    desc: '保留更多帧，适合短视频或更关注识别效果的场景。'
+    value: 'fast',
+    label: '快速',
+    skipFrames: 8,
+    confidence: 0.25,
+    desc: '适合快速预览，处理速度更快。'
   },
   {
     value: 'balanced',
     label: '均衡',
-    skipFrames: 3,
-    desc: '兼顾检测效果与处理速度，适合作为默认模式。'
+    skipFrames: 5,
+    confidence: 0.35,
+    desc: '兼顾速度和识别效果，适合作为默认模式。'
   },
   {
-    value: 'fast',
-    label: '快速',
-    skipFrames: 5,
-    desc: '减少处理帧数，适合超长视频或追求更快出结果。'
+    value: 'accurate',
+    label: '精细',
+    skipFrames: 2,
+    confidence: 0.45,
+    desc: '逐帧更密集，适合对结果要求更高的场景。'
   }
 ]
 
-const fileInputRef = ref(null)
-const selectedFile = ref(null)
 const precision = ref('balanced')
-const confidence = ref(0.25)
-const skipFrames = ref(3)
-const loading = ref(false)
-const errorMsg = ref('')
-const uploadProgress = ref(0)
+const confidence = ref(0.35)
+const skipFrames = ref(5)
 
-const currentPrecision = computed(
-  () => precisionOptions.find((item) => item.value === precision.value) || precisionOptions[1]
-)
+const currentPrecision = computed(() => {
+  return (
+    precisionOptions.find(item => item.value === precision.value) ||
+    precisionOptions[1]
+  )
+})
 
 const currentPrecisionLabel = computed(() => currentPrecision.value.label)
 
-const currentPrecisionText = computed(
-  () => `当前推荐跳帧：${currentPrecision.value.skipFrames}`
-)
+const currentPrecisionText = computed(() => {
+  return `当前推荐：${currentPrecision.value.label} 模式建议跳帧 ${currentPrecision.value.skipFrames}`
+})
 
 const selectedFileSize = computed(() => {
-  if (!selectedFile.value) return '--'
+  if (!selectedFile.value) return ''
   return formatFileSize(selectedFile.value.size)
 })
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
+}
+
+function applyPrecisionPreset(value) {
+  const option = precisionOptions.find(item => item.value === value)
+  if (!option) return
+
+  precision.value = option.value
+  skipFrames.value = option.skipFrames
+  confidence.value = option.confidence
+}
 
 function openFilePicker() {
   fileInputRef.value?.click()
 }
 
-function clearNativeInput() {
+function clearFile() {
+  selectedFile.value = null
+  uploadProgress.value = 0
+  errorMsg.value = ''
   if (fileInputRef.value) {
     fileInputRef.value.value = ''
   }
 }
 
-function clearFile() {
-  selectedFile.value = null
-  errorMsg.value = ''
-  uploadProgress.value = 0
-  clearNativeInput()
-}
-
-function applyPrecisionPreset(value) {
-  const matched = precisionOptions.find((item) => item.value === value)
-  if (!matched) return
-
-  precision.value = matched.value
-  skipFrames.value = matched.skipFrames
-}
-
-function formatFileSize(bytes) {
-  if (!bytes && bytes !== 0) return '--'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+function isVideoFile(file) {
+  if (!file) return false
+  const fileName = file.name.toLowerCase()
+  const validExt = ['.mp4', '.avi', '.mov', '.mkv']
+  return validExt.some(ext => fileName.endsWith(ext))
 }
 
 function handleFileChange(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
   errorMsg.value = ''
-  uploadProgress.value = 0
 
-  const file = event.target.files?.[0] || null
-  if (!file) {
-    selectedFile.value = null
+  if (!isVideoFile(file)) {
+    errorMsg.value = '仅支持 MP4、AVI、MOV、MKV 格式的视频文件'
+    clearFile()
     return
   }
 
-  const extension = `.${file.name.split('.').pop()?.toLowerCase() || ''}`
-
-  if (!ALLOWED_EXTENSIONS.has(extension)) {
-    selectedFile.value = null
-    errorMsg.value = '仅支持上传 MP4、AVI、MOV、MKV 格式的视频文件'
-    clearNativeInput()
-    return
-  }
-
-  if (file.size > MAX_VIDEO_SIZE_BYTES) {
-    selectedFile.value = null
-    errorMsg.value = `视频文件过大，当前限制为 ${MAX_VIDEO_SIZE_MB}MB`
-    clearNativeInput()
+  if (file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
+    errorMsg.value = `文件不能超过 ${MAX_VIDEO_SIZE_MB}MB`
+    clearFile()
     return
   }
 
@@ -277,17 +277,7 @@ function handleFileChange(event) {
 }
 
 async function handleSubmit() {
-  if (!selectedFile.value) {
-    errorMsg.value = '请先选择视频文件'
-    return
-  }
-
-  if (confidence.value < 0 || confidence.value > 1) {
-    errorMsg.value = '置信度阈值必须在 0 到 1 之间'
-    return
-  }
-
-  skipFrames.value = Math.max(1, Number(skipFrames.value) || 1)
+  if (!selectedFile.value || loading.value) return
 
   loading.value = true
   errorMsg.value = ''
@@ -296,26 +286,23 @@ async function handleSubmit() {
   try {
     const formData = new FormData()
     formData.append('file', selectedFile.value)
-    formData.append('mode', 'video')
-    formData.append('precision', precision.value)
     formData.append('confidence', String(confidence.value))
-    formData.append('skip_frames', String(skipFrames.value))
+    formData.append('skip_frames', String(Math.max(1, Number(skipFrames.value) || 1)))
 
     const { data } = await uploadVideo(formData, {
-      timeout: 10 * 60 * 1000,
       onUploadProgress: (event) => {
-        if (!event.total) return
-        uploadProgress.value = Math.min(
-          100,
-          Math.round((event.loaded / event.total) * 100)
-        )
+        if (event.total) {
+          uploadProgress.value = Math.round((event.loaded / event.total) * 100)
+        }
       }
     })
 
     router.push(`/task/${data.task_id}`)
   } catch (error) {
     errorMsg.value =
-      error?.response?.data?.detail || '任务创建失败，请稍后重试'
+      error?.response?.data?.detail ||
+      error?.message ||
+      '上传失败，请稍后重试'
   } finally {
     loading.value = false
   }
