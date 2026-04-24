@@ -208,7 +208,7 @@ const handleUpload = async () => {
   addLog('正在上传视频到云端任务服务器...', 'info');
 
   try {
-    const res = await axios.post(`${API_BASE}/upload`, formData, {
+    const res = await axios.post(`${API_BASE}/api/upload`, formData, {
       onUploadProgress: (p) => {
         if (p.total) {
           uploadPercent.value = Math.round((p.loaded * 100) / p.total);
