@@ -1,132 +1,134 @@
 <template>
-  <div class="app-wrapper">
-    <header class="main-header">
-      <div class="header-left">
-        <div class="brand-logo">
-          <el-icon :size="28"><Cpu /></el-icon>
+  <div class="app-container">
+    <header class="system-header">
+      <div class="header-content">
+        <div class="brand">
+          <div class="logo-icon"><el-icon :size="26"><Cpu /></el-icon></div>
+          <div class="title-group">
+            <h1>道路病害智能检测平台</h1>
+            <p>Road Damage Intelligent Detection System</p>
+          </div>
         </div>
-        <div class="brand-text">
-          <h1>道路缺陷检测系统</h1>
-          <p>Intelligent Video Behavior Detection System</p>
+        <div class="status-area">
+          <el-tag :type="submitting ? 'warning' : 'success'" effect="dark" round>
+            {{ submitting ? '系统计算中' : '系统就绪' }}
+          </el-tag>
+          <el-divider direction="vertical" />
+          <span class="node-text">计算节点：边缘计算服务器-04</span>
         </div>
-      </div>
-      <div class="header-right">
-        <el-tag type="success" effect="dark" round>系统运行正常</el-tag>
-        <el-divider direction="vertical" />
-        <span class="user-info">计算节点: GPU-Node-01</span>
       </div>
     </header>
 
-    <main class="main-content">
-      <aside class="config-sidebar">
-        <div class="card-header-title">
+    <main class="main-layout">
+      <aside class="config-sidebar glass-card">
+        <div class="section-header">
           <el-icon><Operation /></el-icon> 算法参数配置
         </div>
 
-        <el-form :model="form" label-position="top" class="custom-form">
-          <el-form-item label="检测置信度阈值 (Confidence)">
+        <el-form :model="form" label-position="top">
+          <el-form-item label="检测置信度 (Confidence)">
             <template #label>
-              <div class="label-with-tooltip">
-                检测置信度 <el-tooltip content="过滤掉得分低于此值的检测结果"><el-icon><QuestionFilled /></el-icon></el-tooltip>
-              </div>
+              <div class="label-info">置信度 <el-tooltip content="阈值越高，检测结果越精确但可能漏检"><el-icon><InfoFilled /></el-icon></el-tooltip></div>
             </template>
-            <el-slider v-model="form.confidence" :min="0" :max="1" :step="0.01" />
-            <div class="slider-value">{{ form.confidence.toFixed(2) }}</div>
+            <el-slider v-model="form.confidence" :min="0.1" :max="1" :step="0.01" />
+            <div class="slider-display">{{ form.confidence.toFixed(2) }}</div>
           </el-form-item>
 
-          <el-form-item label="抽帧采样频率 (Frame Skip)">
-            <el-input-number v-model="form.skipFrames" :min="1" :max="30" class="full-width" />
-            <p class="input-tip">数值越大处理越快，但可能遗漏细节</p>
-          </el-form-item>
-
-          <el-form-item label="运算推理模式">
-            <el-select v-model="form.mode" class="full-width">
-              <el-option label="实时平衡模式 (FP16)" value="real" />
-              <el-option label="高精度检测模式 (FP32)" value="precise" />
-              <el-option label="极速预览模式 (INT8)" value="fast" />
+          <el-form-item label="分析精度">
+            <el-select v-model="form.precision" placeholder="选择推理模式" class="w-100">
+              <el-option label="极速模式 (INT8)" value="fast" />
+              <el-option label="均衡模式 (FP16)" value="balanced" />
+              <el-option label="高精度模式 (FP32)" value="precision" />
             </el-select>
+          </el-form-item>
+
+          <el-form-item label="抽帧频率 (Frame Skip)">
+            <el-input-number v-model="form.skipFrames" :min="1" :max="30" class="w-100" />
+            <span class="hint">每隔 {{ form.skipFrames }} 帧进行一次 AI 识别</span>
           </el-form-item>
         </el-form>
 
-        <div class="workflow-info">
-          <div class="workflow-title">处理流程</div>
-          <el-steps direction="vertical" :active="submitting ? 1 : 0" size="small">
-            <el-step title="视频流预处理" />
-            <el-step title="特征向量提取" />
-            <el-step title="行为逻辑判定" />
-            <el-step title="结果渲染生成" />
+        <div class="workflow-steps">
+          <p class="workflow-title">处理阶段预览</p>
+          <el-steps direction="vertical" :active="stepActive" finish-status="success" space="60px">
+            <el-step title="视频流解码" />
+            <el-step title="YOLO 目标提取" />
+            <el-step title="病害分级评价" />
+            <el-step title="生成分析报告" />
           </el-steps>
         </div>
       </aside>
 
-      <section class="task-area">
-        <div class="glass-card upload-section">
-          <div class="card-header-title">
-            <el-icon><VideoCamera /></el-icon> 待分析数据源
+      <section class="content-main">
+        <div class="upload-card glass-card">
+          <div class="section-header">
+            <el-icon><VideoCamera /></el-icon> 原始数据导入
           </div>
 
           <el-upload
-            class="analysis-uploader"
+            class="video-uploader"
             drag
             action="#"
             :auto-upload="false"
             :show-file-list="false"
             @change="handleFileChange"
           >
-            <div v-if="!selectedFile" class="upload-placeholder">
-              <el-icon class="el-icon--upload"><Cloudy /></el-icon>
+            <div v-if="!selectedFile" class="upload-inner">
+              <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
               <div class="el-upload__text">
-                将视频文件拖到此处，或 <em>点击上传本地资源</em>
+                拖拽道路监控视频至此，或 <em>点击上传本地文件</em>
               </div>
             </div>
-            <div v-else class="file-preview-box">
+            <div v-else class="file-info-box">
               <div class="file-icon"><VideoPlay /></div>
-              <div class="file-details">
-                <span class="name">{{ selectedFile.name }}</span>
-                <span class="size">{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</span>
+              <div class="file-meta">
+                <span class="file-name">{{ selectedFile.name }}</span>
+                <span class="file-size">{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</span>
               </div>
-              <el-button type="danger" link @click.stop="selectedFile = null">重选</el-button>
+              <el-button link type="primary" @click.stop="selectedFile = null">更换文件</el-button>
             </div>
           </el-upload>
         </div>
 
-        <div class="glass-card action-panel">
-          <div class="status-monitor" v-if="submitting">
-            <div class="monitor-header">
-              <span class="loading-text">
-                <el-icon class="is-loading"><Loading /></el-icon> 数据同步至云端推理服务器...
-              </span>
+        <div class="action-card glass-card">
+          <div v-if="submitting" class="progress-container">
+            <div class="progress-text">
+              <span>数据传输同步中 (Uploader)</span>
               <span class="percentage">{{ uploadPercent }}%</span>
             </div>
             <el-progress
               :percentage="uploadPercent"
-              :stroke-width="15"
-              :color="linearGradient"
+              :stroke-width="12"
+              :color="customColors"
               striped
               striped-flow
+              :show-text="false"
             />
           </div>
 
-          <div class="button-group">
+          <div class="btn-group">
             <el-button
               type="primary"
               size="large"
-              class="glow-button"
+              class="main-submit-btn"
               :loading="submitting"
-              @click="submitTask"
+              @click="handleUpload"
             >
-              {{ submitting ? '后端计算中...' : '启动 AI 行为检测' }}
+              {{ submitting ? '系统正在处理视频数据...' : '开始执行病害检测' }}
             </el-button>
-            <el-button size="large" plain @click="resetForm">重置参数</el-button>
           </div>
         </div>
 
-        <div class="system-logs glass-card">
-          <div class="log-header">系统实时日志 (Console)</div>
-          <div class="log-content">
-            <p v-for="(log, index) in logs" :key="index" :class="log.type">
-              <span class="time">[{{ log.time }}]</span> {{ log.msg }}
-            </p>
+        <div class="log-card glass-card">
+          <div class="log-header">
+            <span>实时系统日志</span>
+            <el-button link type="primary" size="small" @click="logs = []">清空</el-button>
+          </div>
+          <div class="log-viewport" ref="logContainer">
+            <div v-for="(item, index) in logs" :key="index" :class="['log-line', item.type]">
+              <span class="log-time">{{ item.time }}</span>
+              <span class="log-msg">{{ item.msg }}</span>
+            </div>
           </div>
         </div>
       </section>
@@ -135,197 +137,255 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue';
-import { Cpu, Operation, VideoCamera, Cloudy, VideoPlay, Loading, QuestionFilled } from '@element-plus/icons-vue';
+import { ref, reactive, onMounted, nextTick } from 'vue';
+import { useRouter } from 'vue-router'; // 导入路由
+import { Cpu, Operation, VideoCamera, UploadFilled, VideoPlay, InfoFilled } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import axios from 'axios';
 
-// --- 状态定义 ---
+const router = useRouter(); // 初始化路由
+
+// --- 状态变量 ---
 const submitting = ref(false);
 const uploadPercent = ref(0);
 const selectedFile = ref(null);
-const logs = ref([
-  { time: '10:24:01', type: 'info', msg: '系统内核初始化完毕...' },
-  { time: '10:24:03', type: 'success', msg: 'GPU 加速引擎已就绪 (NVIDIA RTX 4090)' }
-]);
+const stepActive = ref(0);
+const logs = ref([]);
+const logContainer = ref(null);
 
-const linearGradient = [
-  { color: '#6366f1', percentage: 0 },
+const customColors = [
+  { color: '#93c5fd', percentage: 20 },
   { color: '#2563eb', percentage: 100 },
 ];
 
-// --- 表单与持久化 ---
 const form = reactive({
-  confidence: 0.25,
-  skipFrames: 5,
-  mode: 'real'
+  confidence: 0.45,
+  precision: 'balanced',
+  skipFrames: 5
 });
 
 // --- 方法 ---
-const handleFileChange = (file) => {
-  selectedFile.value = file.raw;
-  addLog(`导入视频文件: ${file.name}`, 'info');
-};
 
+// 记录日志
 const addLog = (msg, type = 'info') => {
   const time = new Date().toLocaleTimeString();
-  logs.value.unshift({ time, type, msg });
-  if (logs.value.length > 8) logs.value.pop();
+  logs.value.push({ time, msg, type });
+  nextTick(() => {
+    if (logContainer.value) {
+      logContainer.value.scrollTop = logContainer.value.scrollHeight;
+    }
+  });
 };
 
-const submitTask = async () => {
-  if (!selectedFile.value) return ElMessage.warning('请选择输入源');
+// 文件选择
+const handleFileChange = (file) => {
+  selectedFile.value = file.raw;
+  addLog(`已加载本地视频资源: ${file.name}`, 'success');
+};
 
-  submitting.value = true;
-  addLog('开始任务调度，正在分配计算资源...', 'info');
+// 核心：上传并跳转
+const handleUpload = async () => {
+  if (!selectedFile.value) {
+    return ElMessage.warning('请先选择需要分析的视频文件');
+  }
 
   const formData = new FormData();
-  formData.append('file', selectedFile.value);
+  formData.append('video', selectedFile.value);
   formData.append('conf', form.confidence);
+  formData.append('mode', form.precision);
+  formData.append('skip', form.skipFrames);
+
+  submitting.value = true;
+  uploadPercent.value = 0;
+  stepActive.value = 1;
+  addLog('开始初始化计算后端，正在建立 WebSocket 通信...', 'info');
 
   try {
     const res = await axios.post('/api/upload', formData, {
-      onUploadProgress: (p) => {
-        uploadPercent.value = Math.round((p.loaded * 100) / p.total);
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          uploadPercent.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          if (uploadPercent.value > 50) stepActive.value = 2;
+        }
       }
     });
-    addLog('数据传输完成，AI 引擎分析中...', 'success');
-    ElMessage.success('任务处理请求已响应');
-  } catch (e) {
-    addLog('网络连接异常或后端拒绝服务', 'error');
-  } finally {
-    setTimeout(() => { submitting.value = false; }, 1000);
+
+    // 假设后端成功返回 code: 200 和 data.id (任务ID)
+    if (res.data.code === 200) {
+      const taskId = res.data.data.id;
+      addLog(`任务提交成功，任务ID: ${taskId}。正在跳转至分析结果页...`, 'success');
+      stepActive.value = 4;
+
+      ElMessage({
+        message: '上传成功！即将显示分析结果',
+        type: 'success',
+        duration: 2000
+      });
+
+      // 延迟跳转，给用户一点心理反馈时间
+      setTimeout(() => {
+        router.push({
+          name: 'Result',
+          params: { taskId: taskId }
+        });
+      }, 1500);
+
+    } else {
+      throw new Error(res.data.msg || '服务器返回异常');
+    }
+
+  } catch (error) {
+    console.error(error);
+    addLog(`服务请求失败: ${error.message}`, 'error');
+    ElMessage.error('上传失败，请检查后端 API 连接');
+    submitting.value = false;
   }
 };
 
-const resetForm = () => {
-  form.confidence = 0.25;
-  form.skipFrames = 5;
-  form.mode = 'real';
-  addLog('用户重置算法参数', 'info');
-};
+onMounted(() => {
+  addLog('检测平台内核已就绪，GPU 加速已启用。', 'info');
+});
 </script>
 
 <style scoped>
-/* 基础变量 */
-:root {
-  --primary-color: #2563eb;
-  --bg-color: #f1f5f9;
-  --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-.app-wrapper {
+/* 整体背景：浅灰科技感 */
+.app-container {
   min-height: 100vh;
-  background-color: #f8fafc;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1e293b;
+  background: #f1f5f9;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.03) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(37, 99, 235, 0.03) 0px, transparent 50%);
 }
 
 /* 顶部导航 */
-.main-header {
-  height: 80px;
+.system-header {
   background: #ffffff;
+  height: 80px;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 0 40px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-.header-left { display: flex; align-items: center; gap: 15px; }
-.brand-logo {
-  background: var(--primary-color);
+.header-content {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.brand { display: flex; align-items: center; gap: 15px; }
+.logo-icon {
+  background: #2563eb;
   color: white;
   padding: 10px;
   border-radius: 12px;
 }
-.brand-text h1 { font-size: 18px; margin: 0; color: #0f172a; }
-.brand-text p { font-size: 12px; margin: 0; color: #64748b; letter-spacing: 1px; }
+.title-group h1 { font-size: 20px; margin: 0; color: #0f172a; font-weight: 800; }
+.title-group p { font-size: 11px; margin: 0; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; }
 
-/* 主布局 */
-.main-content {
+.node-text { font-size: 13px; color: #64748b; font-weight: 500; }
+
+/* 布局 */
+.main-layout {
   display: flex;
   max-width: 1400px;
   margin: 30px auto;
-  gap: 30px;
+  gap: 25px;
   padding: 0 20px;
 }
 
-.config-sidebar {
-  width: 350px;
-  background: white;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: var(--card-shadow);
-  height: fit-content;
-}
-
-.task-area { flex: 1; display: flex; flex-direction: column; gap: 24px; }
+.config-sidebar { width: 320px; flex-shrink: 0; height: fit-content; }
+.content-main { flex: 1; display: flex; flex-direction: column; gap: 25px; }
 
 /* 玻璃拟态卡片 */
 .glass-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
   border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   padding: 24px;
-  box-shadow: var(--card-shadow);
-  border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
-.card-header-title {
+.section-header {
   font-weight: 700;
+  font-size: 15px;
   margin-bottom: 20px;
   display: flex;
   align-items: center;
   gap: 10px;
   color: #334155;
+  border-left: 4px solid #2563eb;
+  padding-left: 12px;
 }
 
-/* 表单细节 */
-.custom-form .el-form-item { margin-bottom: 25px; }
-.slider-value { text-align: right; font-family: monospace; font-weight: bold; color: var(--primary-color); }
-.full-width { width: 100%; }
-.input-tip { font-size: 12px; color: #94a3b8; margin-top: 5px; }
+/* 侧边栏细节 */
+.label-info { display: flex; align-items: center; gap: 5px; }
+.slider-display { text-align: right; font-weight: bold; color: #2563eb; font-family: monospace; }
+.hint { font-size: 12px; color: #94a3b8; }
+.w-100 { width: 100%; }
+.workflow-info { margin-top: 30px; }
+.workflow-title { font-size: 12px; font-weight: bold; color: #94a3b8; margin-bottom: 20px; }
 
-/* 上传区 */
-.analysis-uploader :deep(.el-upload-dragger) {
-  border: 2px dashed #cbd5e1;
+/* 上传组件覆盖 */
+:deep(.el-upload-dragger) {
+  border: 2px dashed #e2e8f0;
   background: #f8fafc;
   transition: all 0.3s;
 }
-.analysis-uploader :deep(.el-upload-dragger:hover) { border-color: var(--primary-color); background: #eff6ff; }
-
-.upload-placeholder .el-icon--upload { font-size: 48px; color: #94a3b8; margin-bottom: 10px; }
-.file-preview-box { display: flex; align-items: center; gap: 15px; padding: 20px; }
-.file-icon { font-size: 32px; color: var(--primary-color); }
-.file-details .name { display: block; font-weight: 600; font-size: 14px; }
-.file-details .size { font-size: 12px; color: #64748b; }
-
-/* 日志面板 */
-.system-logs { background: #0f172a; color: #94a3b8; font-family: 'Consolas', monospace; }
-.log-header { font-size: 12px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 10px; color: #38bdf8; }
-.log-content { height: 150px; overflow-y: auto; font-size: 13px; line-height: 1.6; }
-.log-content p { margin: 4px 0; }
-.log-content .time { color: #475569; }
-.log-content .success { color: #4ade80; }
-.log-content .error { color: #f87171; }
-
-/* 按钮动画 */
-.glow-button {
-  box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39);
-  padding: 25px 40px;
-  font-size: 16px;
+:deep(.el-upload-dragger:hover) {
+  border-color: #2563eb;
+  background: #eff6ff;
 }
 
-.workflow-info {
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #f1f5f9;
+.file-info-box {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
 }
-.workflow-title { font-size: 13px; font-weight: bold; margin-bottom: 15px; color: #64748b; }
+.file-icon { font-size: 30px; color: #2563eb; }
+.file-name { display: block; font-weight: 600; font-size: 14px; color: #1e293b; }
+.file-size { font-size: 12px; color: #64748b; }
+
+/* 进度条与按钮 */
+.progress-container { margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 10px; }
+.progress-text { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; font-weight: bold; color: #2563eb; }
+.main-submit-btn { width: 100%; height: 56px; font-size: 16px; font-weight: bold; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2); }
+
+/* 日志窗口 (程序员风格) */
+.log-card { background: #0f172a; color: #e2e8f0; border: none; }
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  color: #38bdf8;
+  font-size: 12px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #1e293b;
+  padding-bottom: 8px;
+}
+.log-viewport {
+  height: 140px;
+  overflow-y: auto;
+  font-family: 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.log-line { margin-bottom: 4px; }
+.log-time { color: #475569; margin-right: 10px; }
+.success { color: #4ade80; }
+.error { color: #f87171; }
+
+/* 滚动条美化 */
+.log-viewport::-webkit-scrollbar { width: 4px; }
+.log-viewport::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
 @media (max-width: 1000px) {
-  .main-content { flex-direction: column; }
-  .config-sidebar { width: auto; }
+  .main-layout { flex-direction: column; }
+  .config-sidebar { width: 100%; }
 }
 </style>
