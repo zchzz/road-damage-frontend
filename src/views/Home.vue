@@ -153,7 +153,7 @@ const router = useRouter();
 
 // 改成你的 Render 后端地址。
 // 注意：你的 FastAPI router 是 @router.post("/upload")，所以这里请求 `${API_BASE}/upload`
-const API_BASE = 'https://你的-render后端地址';
+const API_BASE = 'https://road-damage-backend-1.onrender.com';
 
 const submitting = ref(false);
 const uploadPercent = ref(0);
