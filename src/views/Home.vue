@@ -372,7 +372,9 @@ async function submitTask() {
 
     ElMessage.success('检测任务提交成功，正在跳转到处理界面')
 
-    router.push(`/task/${taskId}`)
+    router.push({
+    name: 'TaskDetail',
+    params: { id: taskId }})
   } catch (error) {
     console.error(error)
     ElMessage.error('检测任务提交失败')
