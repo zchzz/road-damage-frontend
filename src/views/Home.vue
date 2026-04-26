@@ -1,19 +1,18 @@
 <template>
   <div class="home-page">
     <div class="page-shell">
-      <!-- 顶部介绍 -->
       <section class="hero-section">
         <div class="hero-left">
           <div class="hero-badge">本科毕业设计系统首页</div>
           <h1 class="hero-title">基于深度学习的道路缺陷检测系统</h1>
           <p class="hero-desc">
             本系统用于道路缺陷视频检测任务，支持视频上传、参数配置、抽帧处理、
-            检测任务提交及页面跳转，可作为本科毕业设计项目展示首页。
+            检测任务提交及处理页面跳转，适合作为本科毕业设计系统展示首页。
           </p>
 
           <div class="hero-actions">
             <el-button type="primary" @click="scrollToUpload">开始检测</el-button>
-            <el-button plain @click="scrollToTaskInfo">查看功能说明</el-button>
+            <el-button plain @click="scrollToTaskInfo">功能说明</el-button>
           </div>
         </div>
 
@@ -29,52 +28,49 @@
               </div>
               <div class="summary-item">
                 <span class="summary-label">主要功能</span>
-                <span class="summary-value">上传、抽帧、检测、跳转展示</span>
+                <span class="summary-value">上传、抽帧、检测、结果查看</span>
               </div>
               <div class="summary-item">
                 <span class="summary-label">前端技术</span>
                 <span class="summary-value">Vue 3 + Element Plus</span>
               </div>
               <div class="summary-item">
-                <span class="summary-label">系统特点</span>
-                <span class="summary-value">界面简洁、流程清晰、适合答辩展示</span>
+                <span class="summary-label">页面风格</span>
+                <span class="summary-value">本科毕业设计展示风格</span>
               </div>
             </div>
           </el-card>
         </div>
       </section>
 
-      <!-- 三步说明 -->
       <section class="panel-grid three-grid">
         <el-card shadow="hover" class="info-card">
           <div class="mini-title">步骤一</div>
           <h3>上传视频文件</h3>
-          <p>通过拖拽或点击方式上传道路视频，系统会实时显示上传百分比。</p>
+          <p>选择待检测道路视频文件，系统支持点击上传并显示真实上传进度百分比。</p>
         </el-card>
 
         <el-card shadow="hover" class="info-card">
           <div class="mini-title">步骤二</div>
           <h3>设置检测参数</h3>
-          <p>可设置置信度阈值和抽帧模式，以满足不同检测效率与精度需求。</p>
+          <p>设置置信度和抽帧模式，满足不同场景下的检测效率与精度要求。</p>
         </el-card>
 
         <el-card shadow="hover" class="info-card">
           <div class="mini-title">步骤三</div>
-          <h3>提交检测任务</h3>
-          <p>文件上传完成后提交检测任务，并自动跳转到检测页面查看处理进度。</p>
+          <h3>进入处理界面</h3>
+          <p>上传完成后提交检测任务，系统自动跳转到任务处理页面查看进度。</p>
         </el-card>
       </section>
 
-      <!-- 上传与参数 -->
       <section class="main-grid" ref="uploadSection">
-        <!-- 上传区 -->
         <el-card shadow="hover" class="upload-card">
           <template #header>
             <div class="card-title">视频上传</div>
           </template>
 
           <div class="section-tip">
-            请上传待检测视频文件。上传完成后，系统会显示“上传完成”状态，再进行任务提交。
+            请先上传检测视频文件。上传成功后将显示“上传完成”，然后再提交检测任务。
           </div>
 
           <el-upload
@@ -118,17 +114,12 @@
           </div>
 
           <div v-if="uploadStatusText" class="upload-status">
-            <el-tag
-              :type="uploadStatusTagType"
-              effect="light"
-              size="large"
-            >
+            <el-tag :type="uploadStatusTagType" effect="light" size="large">
               {{ uploadStatusText }}
             </el-tag>
           </div>
         </el-card>
 
-        <!-- 参数区 -->
         <el-card shadow="hover" class="param-card">
           <template #header>
             <div class="card-title">参数配置</div>
@@ -147,7 +138,7 @@
                 />
               </div>
               <div class="param-help">
-                置信度用于控制检测结果筛选阈值，数值越高，筛选越严格。
+                置信度用于控制检测结果的筛选阈值，数值越高越严格。
               </div>
             </el-form-item>
 
@@ -159,14 +150,12 @@
                 >
                   高精度抽帧
                 </el-button>
-
                 <el-button
                   :type="params.frameInterval === 5 ? 'primary' : 'default'"
                   @click="params.frameInterval = 5"
                 >
                   标准抽帧
                 </el-button>
-
                 <el-button
                   :type="params.frameInterval === 10 ? 'primary' : 'default'"
                   @click="params.frameInterval = 10"
@@ -191,7 +180,7 @@
                 </div>
                 <div class="mode-item">
                   <span class="mode-dot dot-orange"></span>
-                  <span>快速抽帧：处理速度快，适合测试或答辩演示</span>
+                  <span>快速抽帧：处理更快，适合快速测试与答辩演示</span>
                 </div>
               </div>
             </el-form-item>
@@ -211,17 +200,16 @@
         </el-card>
       </section>
 
-      <!-- 功能说明 -->
       <section class="panel-grid two-grid" ref="taskInfoSection">
         <el-card shadow="hover" class="desc-card">
           <template #header>
             <div class="card-title">系统功能说明</div>
           </template>
           <ul class="desc-list">
-            <li>支持道路检测视频文件上传，并显示真实上传百分比。</li>
-            <li>支持设置检测置信度阈值，提高检测结果可控性。</li>
-            <li>支持抽帧按钮模式设置，便于平衡检测精度与处理效率。</li>
-            <li>支持上传完成后提交检测任务并跳转至检测页面。</li>
+            <li>支持真实上传进度显示与百分比展示。</li>
+            <li>支持上传完成状态提示。</li>
+            <li>支持抽帧模式按钮选择。</li>
+            <li>支持检测任务提交后自动跳转到处理界面。</li>
           </ul>
         </el-card>
 
@@ -230,10 +218,10 @@
             <div class="card-title">使用建议</div>
           </template>
           <ul class="desc-list">
-            <li>答辩演示建议选择“标准抽帧”模式，效果较为稳定。</li>
-            <li>若视频较大，可先上传完成后再提交检测任务。</li>
-            <li>若追求更高检测效果，可使用“高精度抽帧”模式。</li>
-            <li>若仅用于快速测试，可使用“快速抽帧”模式。</li>
+            <li>建议优先使用标准抽帧模式进行演示。</li>
+            <li>上传完成后再点击提交任务，流程更清晰。</li>
+            <li>若需要更高精度，可选择高精度抽帧。</li>
+            <li>进入处理界面后可查看任务执行状态。</li>
           </ul>
         </el-card>
       </section>
@@ -308,11 +296,6 @@ function beforeUpload(file) {
   return isVideo && isLt500M
 }
 
-/**
- * 真实上传文件
- * 这里默认上传接口为 /api/upload
- * 你如果后端地址不同，改这一行即可
- */
 async function handleUpload(option) {
   const { file, onSuccess, onError } = option
 
@@ -344,21 +327,16 @@ async function handleUpload(option) {
     uploadStatus.value = 'success'
     ElMessage.success('文件上传完成')
 
-    if (onSuccess) onSuccess(res.data)
+    onSuccess && onSuccess(res.data)
   } catch (error) {
     uploadStatus.value = 'error'
     ElMessage.error('文件上传失败')
-    if (onError) onError(error)
+    onError && onError(error)
   } finally {
     uploading.value = false
   }
 }
 
-/**
- * 提交检测任务
- * 默认接口为 /api/detect
- * 如果你的后端不同，改这里即可
- */
 async function submitTask() {
   if (!selectedFile.value) {
     ElMessage.warning('请先选择视频文件')
@@ -385,16 +363,16 @@ async function submitTask() {
       fileName: selectedFile.value.name,
     })
 
-    ElMessage.success('检测任务提交成功，正在跳转到检测页面')
+    const taskId = res.data.task_id || res.data.taskId
 
-    // 默认跳转到 DetectVideo 页面
-    // taskId 放在 query 中，兼容性更好
-    router.push({
-      name: 'DetectVideo',
-      query: {
-        taskId: res.data.taskId,
-      },
-    })
+    if (!taskId) {
+      ElMessage.error('后端没有返回 task_id，无法跳转到处理界面')
+      return
+    }
+
+    ElMessage.success('检测任务提交成功，正在跳转到处理界面')
+
+    router.push(`/task/${taskId}`)
   } catch (error) {
     console.error(error)
     ElMessage.error('检测任务提交失败')
