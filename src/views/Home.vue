@@ -1,7 +1,6 @@
 <template>
   <div class="home-page">
     <div class="page-shell">
-      <!-- 顶部介绍区 -->
       <section class="hero-section">
         <div class="hero-left">
           <div class="hero-badge">本科毕业设计系统首页</div>
@@ -44,12 +43,11 @@
         </div>
       </section>
 
-      <!-- 流程说明 -->
       <section class="panel-grid three-grid">
         <el-card shadow="hover" class="info-card">
           <div class="mini-title">步骤一</div>
           <h3>选择检测视频</h3>
-          <p>通过点击上传方式选择待分析视频文件，页面显示文件信息与上传进度。</p>
+          <p>点击上传选择待分析视频文件，页面会显示文件信息与上传状态。</p>
         </el-card>
 
         <el-card shadow="hover" class="info-card">
@@ -65,16 +63,14 @@
         </el-card>
       </section>
 
-      <!-- 上传与参数配置 -->
       <section class="main-grid" ref="uploadSection">
-        <!-- 上传区域 -->
         <el-card shadow="hover" class="upload-card">
           <template #header>
             <div class="card-title">视频上传</div>
           </template>
 
           <div class="section-tip">
-            请上传需要检测的道路视频文件。点击“提交检测任务”后，将开始真实上传并创建分析任务。
+            请先选择需要检测的视频文件，再点击“提交检测任务”开始真实上传并创建任务。
           </div>
 
           <el-upload
@@ -83,7 +79,7 @@
             :auto-upload="false"
             :show-file-list="false"
             :before-upload="beforeUpload"
-            :http-request="handleUpload"
+            :on-change="handleFileChange"
             accept="video/*"
           >
             <el-icon class="upload-icon"><UploadFilled /></el-icon>
@@ -125,7 +121,6 @@
           </div>
         </el-card>
 
-        <!-- 参数区域 -->
         <el-card shadow="hover" class="param-card">
           <template #header>
             <div class="card-title">参数配置</div>
@@ -206,7 +201,6 @@
         </el-card>
       </section>
 
-      <!-- 系统说明 -->
       <section class="panel-grid two-grid" ref="explainSection">
         <el-card shadow="hover" class="desc-card">
           <template #header>
@@ -241,7 +235,7 @@ import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { UploadFilled, VideoPlay } from '@element-plus/icons-vue'
-import axios from 'axios'
+import { uploadVideo } from '@/api'
 
 const router = useRouter()
 
@@ -303,18 +297,18 @@ function beforeUpload(file) {
     return false
   }
 
-  selectedFile.value = file
+  return true
+}
+
+function handleFileChange(uploadFile) {
+  const rawFile = uploadFile.raw || uploadFile
+  if (!rawFile) return
+
+  selectedFile.value = rawFile
   uploadProgress.value = 0
   uploadStatus.value = 'ready'
   ElMessage.success('文件选择成功')
-  return false
 }
-
-/**
- * el-upload 要求存在 http-request，这里不实际使用它上传
- * 真正上传放到 submitTask 里，这样上传进度和“提交检测任务”流程一致
- */
-function handleUpload() {}
 
 async function submitTask() {
   if (!selectedFile.value) {
@@ -333,14 +327,7 @@ async function submitTask() {
     formData.append('confidence', params.confidence)
     formData.append('frameInterval', params.frameInterval)
 
-    /**
-     * 这里默认检测接口为 /api/detect
-     * 如果你的实际接口不是这个地址，改成你的后端接口即可
-     */
-    const res = await axios.post('/api/detect', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      },
+    const res = await uploadVideo(formData, {
       onUploadProgress(progressEvent) {
         if (progressEvent.total) {
           uploadProgress.value = Math.round(
@@ -361,7 +348,7 @@ async function submitTask() {
 
     if (!taskId) {
       ElMessage.error('后端没有返回 task_id，无法跳转到任务详情页面')
-      console.error('检测接口返回数据:', res.data)
+      console.error('上传接口返回数据:', res.data)
       return
     }
 
