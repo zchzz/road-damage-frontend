@@ -1,18 +1,19 @@
 <template>
   <div class="home-page">
     <div class="page-shell">
+      <!-- 顶部介绍区 -->
       <section class="hero-section">
         <div class="hero-left">
           <div class="hero-badge">本科毕业设计系统首页</div>
-          <h1 class="hero-title">基于深度学习的道路缺陷检测系统</h1>
+          <h1 class="hero-title">基于深度学习的道路病害视频分析平台</h1>
           <p class="hero-desc">
-            本系统用于道路缺陷视频检测任务，支持视频上传、参数配置、抽帧处理、
-            检测任务提交及处理页面跳转，适合作为本科毕业设计系统展示首页。
+            本系统面向道路病害检测场景，支持检测视频上传、参数配置、抽帧处理、
+            检测任务提交以及任务详情查看，适用于本科毕业设计系统展示与答辩演示。
           </p>
 
           <div class="hero-actions">
             <el-button type="primary" @click="scrollToUpload">开始检测</el-button>
-            <el-button plain @click="scrollToTaskInfo">功能说明</el-button>
+            <el-button plain @click="scrollToExplain">系统说明</el-button>
           </div>
         </div>
 
@@ -23,15 +24,15 @@
             </template>
             <div class="summary-list">
               <div class="summary-item">
-                <span class="summary-label">研究对象</span>
-                <span class="summary-value">道路缺陷视频检测</span>
+                <span class="summary-label">项目名称</span>
+                <span class="summary-value">道路病害视频分析平台</span>
               </div>
               <div class="summary-item">
-                <span class="summary-label">主要功能</span>
+                <span class="summary-label">核心功能</span>
                 <span class="summary-value">上传、抽帧、检测、结果查看</span>
               </div>
               <div class="summary-item">
-                <span class="summary-label">前端技术</span>
+                <span class="summary-label">前端框架</span>
                 <span class="summary-value">Vue 3 + Element Plus</span>
               </div>
               <div class="summary-item">
@@ -43,42 +44,46 @@
         </div>
       </section>
 
+      <!-- 流程说明 -->
       <section class="panel-grid three-grid">
         <el-card shadow="hover" class="info-card">
           <div class="mini-title">步骤一</div>
-          <h3>上传视频文件</h3>
-          <p>选择待检测道路视频文件，系统支持点击上传并显示真实上传进度百分比。</p>
+          <h3>选择检测视频</h3>
+          <p>通过点击上传方式选择待分析视频文件，页面显示文件信息与上传进度。</p>
         </el-card>
 
         <el-card shadow="hover" class="info-card">
           <div class="mini-title">步骤二</div>
-          <h3>设置检测参数</h3>
-          <p>设置置信度和抽帧模式，满足不同场景下的检测效率与精度要求。</p>
+          <h3>设置分析参数</h3>
+          <p>根据检测需求设置置信度阈值及抽帧模式，兼顾检测精度与处理效率。</p>
         </el-card>
 
         <el-card shadow="hover" class="info-card">
           <div class="mini-title">步骤三</div>
-          <h3>进入处理界面</h3>
-          <p>上传完成后提交检测任务，系统自动跳转到任务处理页面查看进度。</p>
+          <h3>进入任务详情</h3>
+          <p>提交检测任务后自动跳转到任务详情页面，查看当前分析处理状态。</p>
         </el-card>
       </section>
 
+      <!-- 上传与参数配置 -->
       <section class="main-grid" ref="uploadSection">
+        <!-- 上传区域 -->
         <el-card shadow="hover" class="upload-card">
           <template #header>
             <div class="card-title">视频上传</div>
           </template>
 
           <div class="section-tip">
-            请先上传检测视频文件。上传成功后将显示“上传完成”，然后再提交检测任务。
+            请上传需要检测的道路视频文件。点击“提交检测任务”后，将开始真实上传并创建分析任务。
           </div>
 
           <el-upload
             class="upload-area"
             drag
-            :http-request="handleUpload"
-            :before-upload="beforeUpload"
+            :auto-upload="false"
             :show-file-list="false"
+            :before-upload="beforeUpload"
+            :http-request="handleUpload"
             accept="video/*"
           >
             <el-icon class="upload-icon"><UploadFilled /></el-icon>
@@ -120,6 +125,7 @@
           </div>
         </el-card>
 
+        <!-- 参数区域 -->
         <el-card shadow="hover" class="param-card">
           <template #header>
             <div class="card-title">参数配置</div>
@@ -138,7 +144,7 @@
                 />
               </div>
               <div class="param-help">
-                置信度用于控制检测结果的筛选阈值，数值越高越严格。
+                置信度用于控制检测结果筛选阈值，数值越高，检测结果越严格。
               </div>
             </el-form-item>
 
@@ -176,11 +182,11 @@
                 </div>
                 <div class="mode-item">
                   <span class="mode-dot dot-green"></span>
-                  <span>标准抽帧：速度和精度较为均衡，适合大多数情况</span>
+                  <span>标准抽帧：速度和精度均衡，适合大多数情况</span>
                 </div>
                 <div class="mode-item">
                   <span class="mode-dot dot-orange"></span>
-                  <span>快速抽帧：处理更快，适合快速测试与答辩演示</span>
+                  <span>快速抽帧：处理更快，适合演示和快速测试</span>
                 </div>
               </div>
             </el-form-item>
@@ -200,16 +206,17 @@
         </el-card>
       </section>
 
-      <section class="panel-grid two-grid" ref="taskInfoSection">
+      <!-- 系统说明 -->
+      <section class="panel-grid two-grid" ref="explainSection">
         <el-card shadow="hover" class="desc-card">
           <template #header>
             <div class="card-title">系统功能说明</div>
           </template>
           <ul class="desc-list">
-            <li>支持真实上传进度显示与百分比展示。</li>
-            <li>支持上传完成状态提示。</li>
-            <li>支持抽帧模式按钮选择。</li>
-            <li>支持检测任务提交后自动跳转到处理界面。</li>
+            <li>支持视频文件选择与检测任务提交。</li>
+            <li>支持真实上传进度显示及百分比反馈。</li>
+            <li>支持置信度阈值调节与抽帧按钮模式配置。</li>
+            <li>支持任务创建成功后自动跳转至任务详情页面。</li>
           </ul>
         </el-card>
 
@@ -218,10 +225,10 @@
             <div class="card-title">使用建议</div>
           </template>
           <ul class="desc-list">
-            <li>建议优先使用标准抽帧模式进行演示。</li>
-            <li>上传完成后再点击提交任务，流程更清晰。</li>
-            <li>若需要更高精度，可选择高精度抽帧。</li>
-            <li>进入处理界面后可查看任务执行状态。</li>
+            <li>答辩展示时建议优先使用“标准抽帧”模式。</li>
+            <li>若追求更高检测效果，可选择“高精度抽帧”。</li>
+            <li>若仅用于快速测试，可选择“快速抽帧”。</li>
+            <li>提交任务后可在任务详情页面继续查看处理状态。</li>
           </ul>
         </el-card>
       </section>
@@ -239,21 +246,21 @@ import axios from 'axios'
 const router = useRouter()
 
 const uploadSection = ref(null)
-const taskInfoSection = ref(null)
+const explainSection = ref(null)
 
 const selectedFile = ref(null)
-const uploadedFileUrl = ref('')
 const uploadProgress = ref(0)
 const uploading = ref(false)
 const submitting = ref(false)
-const uploadStatus = ref('idle') // idle | uploading | success | error
+const uploadStatus = ref('idle') // idle | ready | uploading | success | error
 
 const params = reactive({
   confidence: 0.5,
-  frameInterval: 5,
+  frameInterval: 5
 })
 
 const uploadStatusText = computed(() => {
+  if (uploadStatus.value === 'ready') return '文件已选择'
   if (uploadStatus.value === 'uploading') return '上传中'
   if (uploadStatus.value === 'success') return '上传完成'
   if (uploadStatus.value === 'error') return '上传失败'
@@ -261,6 +268,7 @@ const uploadStatusText = computed(() => {
 })
 
 const uploadStatusTagType = computed(() => {
+  if (uploadStatus.value === 'ready') return 'info'
   if (uploadStatus.value === 'uploading') return 'warning'
   if (uploadStatus.value === 'success') return 'success'
   if (uploadStatus.value === 'error') return 'danger'
@@ -270,14 +278,14 @@ const uploadStatusTagType = computed(() => {
 function scrollToUpload() {
   uploadSection.value?.scrollIntoView({
     behavior: 'smooth',
-    block: 'start',
+    block: 'start'
   })
 }
 
-function scrollToTaskInfo() {
-  taskInfoSection.value?.scrollIntoView({
+function scrollToExplain() {
+  explainSection.value?.scrollIntoView({
     behavior: 'smooth',
-    block: 'start',
+    block: 'start'
   })
 }
 
@@ -287,55 +295,26 @@ function beforeUpload(file) {
 
   if (!isVideo) {
     ElMessage.error('上传文件必须为视频格式')
+    return false
   }
 
   if (!isLt500M) {
     ElMessage.error('文件大小不能超过 500MB')
+    return false
   }
-
-  return isVideo && isLt500M
-}
-
-async function handleUpload(option) {
-  const { file, onSuccess, onError } = option
 
   selectedFile.value = file
-  uploadedFileUrl.value = ''
   uploadProgress.value = 0
-  uploadStatus.value = 'uploading'
-  uploading.value = true
-
-  const formData = new FormData()
-  formData.append('file', file)
-
-  try {
-    const res = await axios.post('/api/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress(progressEvent) {
-        if (progressEvent.total) {
-          uploadProgress.value = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          )
-        }
-      },
-    })
-
-    uploadedFileUrl.value = res.data.fileUrl || res.data.url || ''
-    uploadProgress.value = 100
-    uploadStatus.value = 'success'
-    ElMessage.success('文件上传完成')
-
-    onSuccess && onSuccess(res.data)
-  } catch (error) {
-    uploadStatus.value = 'error'
-    ElMessage.error('文件上传失败')
-    onError && onError(error)
-  } finally {
-    uploading.value = false
-  }
+  uploadStatus.value = 'ready'
+  ElMessage.success('文件选择成功')
+  return false
 }
+
+/**
+ * el-upload 要求存在 http-request，这里不实际使用它上传
+ * 真正上传放到 submitTask 里，这样上传进度和“提交检测任务”流程一致
+ */
+function handleUpload() {}
 
 async function submitTask() {
   if (!selectedFile.value) {
@@ -343,43 +322,62 @@ async function submitTask() {
     return
   }
 
-  if (uploadStatus.value !== 'success') {
-    ElMessage.warning('请先完成文件上传')
-    return
-  }
-
-  if (!uploadedFileUrl.value) {
-    ElMessage.warning('未获取到上传文件地址，请检查上传接口返回值')
-    return
-  }
-
   submitting.value = true
+  uploading.value = true
+  uploadStatus.value = 'uploading'
+  uploadProgress.value = 0
 
   try {
-    const res = await axios.post('/api/detect', {
-      fileUrl: uploadedFileUrl.value,
-      confidence: params.confidence,
-      frameInterval: params.frameInterval,
-      fileName: selectedFile.value.name,
+    const formData = new FormData()
+    formData.append('file', selectedFile.value)
+    formData.append('confidence', params.confidence)
+    formData.append('frameInterval', params.frameInterval)
+
+    /**
+     * 这里默认检测接口为 /api/detect
+     * 如果你的实际接口不是这个地址，改成你的后端接口即可
+     */
+    const res = await axios.post('/api/detect', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress(progressEvent) {
+        if (progressEvent.total) {
+          uploadProgress.value = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          )
+        }
+      }
     })
 
-    const taskId = res.data.task_id || res.data.taskId
+    uploadProgress.value = 100
+    uploadStatus.value = 'success'
+
+    const taskId =
+      res.data.task_id ||
+      res.data.taskId ||
+      res.data.data?.task_id ||
+      res.data.data?.taskId
 
     if (!taskId) {
-      ElMessage.error('后端没有返回 task_id，无法跳转到处理界面')
+      ElMessage.error('后端没有返回 task_id，无法跳转到任务详情页面')
+      console.error('检测接口返回数据:', res.data)
       return
     }
 
-    ElMessage.success('检测任务提交成功，正在跳转到处理界面')
+    ElMessage.success('检测任务提交成功，正在跳转到任务详情页面')
 
     router.push({
-    name: 'TaskDetail',
-    params: { id: taskId }})
+      name: 'TaskDetail',
+      params: { taskId }
+    })
   } catch (error) {
-    console.error(error)
+    uploadStatus.value = 'error'
+    console.error('检测任务提交失败:', error)
     ElMessage.error('检测任务提交失败')
   } finally {
     submitting.value = false
+    uploading.value = false
   }
 }
 
